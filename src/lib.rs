@@ -20,6 +20,7 @@ pub enum SaveTo {
 pub struct ConfigHolder<T> {
     _type: PhantomData<T>,
     save_to: SaveTo,
+    app_name: &'static str,
     config_name: &'static str,
 }
 
@@ -27,10 +28,11 @@ impl<T> ConfigHolder<T>
 where
     T: Default + Serialize + DeserializeOwned,
 {
-    pub fn new(save_to: SaveTo, config_name: &'static str) -> Self {
+    pub fn new(save_to: SaveTo, app_name: &'static str, config_name: &'static str) -> Self {
         Self {
             _type: PhantomData,
             save_to,
+            app_name,
             config_name,
         }
     }
@@ -71,7 +73,7 @@ where
 
     fn get_save_dir(&self) -> Option<PathBuf> {
         match self.save_to {
-            SaveTo::AppData => dirs::data_dir(),
+            SaveTo::AppData => dirs::data_dir().map(|path| path.join(self.app_name)),
             SaveTo::Custom(ref path_buf) => Some(path_buf.clone()),
         }
     }
@@ -93,8 +95,11 @@ mod tests {
     #[test]
     fn get_or_create_returns_default_when_no_file_exists() {
         let dir = tempfile::tempdir().unwrap();
-        let holder: ConfigHolder<CustomConfig> =
-            ConfigHolder::new(SaveTo::Custom(dir.path().to_path_buf()), "test_config");
+        let holder: ConfigHolder<CustomConfig> = ConfigHolder::new(
+            SaveTo::Custom(dir.path().to_path_buf()),
+            "test_app",
+            "test_config",
+        );
 
         let config = holder.get_or_create().unwrap();
 
@@ -106,8 +111,11 @@ mod tests {
     #[test]
     fn get_or_create_persists_default_to_disk() {
         let dir = tempfile::tempdir().unwrap();
-        let holder: ConfigHolder<CustomConfig> =
-            ConfigHolder::new(SaveTo::Custom(dir.path().to_path_buf()), "test_config");
+        let holder: ConfigHolder<CustomConfig> = ConfigHolder::new(
+            SaveTo::Custom(dir.path().to_path_buf()),
+            "test_app",
+            "test_config",
+        );
 
         holder.get_or_create().unwrap();
 
@@ -118,8 +126,11 @@ mod tests {
     #[test]
     fn write_then_read_roundtrips() {
         let dir = tempfile::tempdir().unwrap();
-        let holder: ConfigHolder<CustomConfig> =
-            ConfigHolder::new(SaveTo::Custom(dir.path().to_path_buf()), "my_cfg");
+        let holder: ConfigHolder<CustomConfig> = ConfigHolder::new(
+            SaveTo::Custom(dir.path().to_path_buf()),
+            "test_app",
+            "my_cfg",
+        );
 
         let config = CustomConfig {
             name: "Alice".into(),
@@ -137,7 +148,7 @@ mod tests {
     fn get_or_create_does_not_overwrite_existing() {
         let dir = tempfile::tempdir().unwrap();
         let holder: ConfigHolder<CustomConfig> =
-            ConfigHolder::new(SaveTo::Custom(dir.path().to_path_buf()), "keep");
+            ConfigHolder::new(SaveTo::Custom(dir.path().to_path_buf()), "test_app", "keep");
 
         let config = CustomConfig {
             name: "Bob".into(),
@@ -153,8 +164,11 @@ mod tests {
     #[test]
     fn get_save_path_includes_json_extension() {
         let dir = tempfile::tempdir().unwrap();
-        let holder: ConfigHolder<CustomConfig> =
-            ConfigHolder::new(SaveTo::Custom(dir.path().to_path_buf()), "settings");
+        let holder: ConfigHolder<CustomConfig> = ConfigHolder::new(
+            SaveTo::Custom(dir.path().to_path_buf()),
+            "test_app",
+            "settings",
+        );
 
         let path = holder.get_save_path().unwrap();
         assert_eq!(path.file_name().unwrap(), "settings.json");
