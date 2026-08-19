@@ -71,11 +71,16 @@ where
         Ok(save_dir.join(format!("{}.json", self.config_name)))
     }
 
+    /// Gets the save directory, creating it if it doesn't exist
     fn get_save_dir(&self) -> Option<PathBuf> {
-        match self.save_to {
+        let path = match self.save_to {
             SaveTo::AppData => dirs::data_dir().map(|path| path.join(self.app_name)),
             SaveTo::Custom(ref path_buf) => Some(path_buf.clone()),
+        }?;
+        if !path.exists() {
+            std::fs::create_dir_all(&path).ok()?;
         }
+        Some(path)
     }
 }
 
