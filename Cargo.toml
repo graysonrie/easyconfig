@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["Grayson Rieger graysonr12@icloud.com"]
 license = "MIT"
 description = "Write to a config in the AppData or custom dir"
+repository = "https://github.com/graysonrie/easyconfig"
 
 [dependencies]
 serde = { "version" = "1.0.228", "features" = ["derive"] }
